@@ -1,0 +1,46 @@
+                            | # Adam Cooper ac251190 
+                            | 
+0x000:                      | 	.pos 0 
+0x000:                      | init: 
+0x000: 30f40004000000000000 | 	irmovq Stack, %rsp  # Set up stack pointer
+0x00a: 30f50004000000000000 | 	irmovq Stack, %rbp  # Set up base pointer 
+0x014: 805000000000000000   | 	call Main 
+0x01d: 00                   | 	halt 
+                            | 
+                            | # Sample linked list 
+0x020:                      | .align 8 
+0x020:                      | ele1: 
+0x020: 0a00000000000000     | 	.quad 0x00a 
+0x028: 3000000000000000     | 	.quad ele2
+0x030:                      | ele2:
+0x030: b000000000000000     | 	.quad 0x0b0
+0x038: 4000000000000000     | 	.quad ele3
+0x040:                      | ele3: 
+0x040: 000c000000000000     | 	.quad 0xc00 
+0x048: 0000000000000000     | 	.quad 0 
+                            | 
+0x050:                      | Main: 
+0x050: 30f02000000000000000 | 	irmovq ele1, %rax      # Move pointer to ele1 into %rax
+0x05a: a00f                 | 	pushq  %rax            # Push %rax onto the stack 
+0x05c: a05f                 | 	pushq  %rbp            # Push %rbp onto the stack 
+0x05e: 2045                 | 	rrmovq %rsp, %rbp
+0x060: 30f10800000000000000 | 	irmovq $8, %rcx        # Turn %rcx into an index mover
+0x06a: 30f60000000000000000 | 	irmovq $0, %rsi        
+0x074: 50251000000000000000 | 	mrmovq 16(%rbp), %rdx  # Move ele1 into %rdx 
+0x07e: 30f00000000000000000 | 	irmovq $0, %rax        # Set up a base to add to 
+0x088: 809200000000000000   | 	call Rsum 
+0x091: 90                   | 	ret
+                            | 
+0x092:                      | Rsum: 
+0x092: 6020                 | 	addq   %rdx, %rax        # Add the current ele to %rax
+0x094: 6222                 | 	andq   %rdx, %rdx        # Are we at the last ele? 
+0x096: 73b400000000000000   | 	je     End               # If yes, go to End
+0x09f: 6016                 | 	addq   %rcx, %rsi        # Add 8 to %rsi 
+0x0ab: 809200000000000000   | 	call   Rsum 
+                            | 
+0x0b4:                      | End: 
+0x0b4: b05f                 | 	popq %rbp  # TEAR! DOWN! THE STACK! 
+0x0b6: 90                   | 	ret        # Return original call from Main
+                            | 
+0x400:                      | 	.pos 0x400 
+0x400:                      | Stack:

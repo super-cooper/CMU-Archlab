@@ -1,0 +1,64 @@
+# Adam Cooper ac251190 
+
+	.pos 0 
+init: 
+	irmovq Stack, %rsp  # Set up stack pointer 
+	irmovq Stack, %rbp  # Set up base pointer 
+	call Main 
+	halt 
+
+.align 8 
+# Source block 
+src: 
+	.quad 0x00a 
+	.quad 0x0b0 
+	.quad 0xc00 
+
+# Destination block 
+dest: 
+	.quad 0x111 
+	.quad 0x222 
+	.quad 0x333 
+
+Main: 
+	irmovq src, %rdi   # Move src into %rdi 
+	irmovq dest, %rsi  # Move dest into %rsi 
+	irmovq $2, %rbx    # len = 3 - 1
+	pushq  %rdi        # Push %rdi onto stack
+	pushq  %rsi        # Push %rsi onto stack
+	call   copy_block 
+	ret
+
+copy_block: 
+	pushq  %rbp 
+	rrmovq %rsp, %rbp 
+	irmovq $0, %rax        # result = 0
+	irmovq $8, %rcx        # %rcx is index mover
+	irmovq $1, %r9         # %r9 is ++ or --
+	mrmovq 16(%rbp), %rdx  # %rdx = src 
+	mrmovq 24(%rbp), %r8   # %r8 = dest 
+	andq   %rbx, %rbx      # is len 0? 
+	je     End             # if so, end
+	call   Loop
+	ret
+
+Loop: 
+	mrmovq (%rdx), %rdi  # src to %rdi
+	mrmovq (%r8), %rsi   # dest to %rsi
+	rmmovq %rdi, (%r8)   # swap 
+	rmmovq %rsi, (%rdx)
+	xorq   %rdi, %rax    # checksum 
+	andq   %rbx, %rbx    # is len = 0? 
+	je     End           # if so, end
+	addq   %rcx, %rdx    # *src++ 
+	addq   %rcx, %r8     # *dest++ 
+	subq   %r9, %rbx     # len--
+	jmp    Loop           
+
+End: # All this function does is tear down so it's ok to jump to
+	popq %rbp # TEAR! DOWN! THE STACK! 
+	ret       
+
+	.pos 0x400 
+Stack:
+

@@ -1,0 +1,122 @@
+                            | #/* $begin ncopy-ys */
+                            | ##################################################################
+                            | # ncopy.ys - Copy a src block of len words to dst.
+                            | # Return the number of positive words (>0) contained in src.
+                            | #
+                            | # Adam Cooper ac251190
+                            | #
+                            | # 1. Included iaddq statements to lessen steps
+                            | # 2. Added one loop unroller (this took forever)
+                            | # 3. switched up registers to avoid criss-crossing 
+                            | # (I forget the technical term)
+                            | # 4. Added two more loop unrollers (this took two forevers) 
+                            | # 5. Added unroller function so unrolling could be done in factors
+                            | # (inspired by CMU lecture on YouTube)
+                            | # 6. Reordered some mov instructions that cause bubbles
+                            | # 7. Reordered functions (there's still bad jumping sorry)
+                            | # 8. Added functions to handle up to 3 extras since any multiples
+                            | # of four should be handled by the first half of the program
+                            | #
+                            | # In the end, this program really just assesses 4 indices at once
+                            | # (maximum) and adds to count if they're positive. The idea is simple
+                            | # but getting it to work was near impossible.
+                            | #
+                            | ##################################################################
+                            | # Do not modify this portion
+                            | # Function prologue.
+                            | # %rdi = src, %rsi = dst, %rdx = len
+0x000:                      | ncopy:
+                            | 
+                            | ##################################################################
+                            | # You can modify this portion
+                            | 	# Loop header
+                            | 	
+0x000: a05f                 | 	pushq  %rbp
+0x002: 2045                 | 	rrmovq %rsp, %rbp
+0x004: a07f                 | 	pushq  %rdi
+0x006: a06f                 | 	pushq  %rsi             # push src and dst to stack
+0x008: 6300                 | 	xorq   %rax,%rax	# count = 0;
+0x00a: 6222                 | 	andq   %rdx,%rdx	# len <= 0?
+0x00c: 71b101000000000000   | 	jle    End		# if so, goto Done:
+0x015: c0f2fcffffffffffffff | 	iaddq  $-4, %rdx        # len -= 4
+0x01f: 72f300000000000000   | 	jl     Extra            # Check for extras
+                            | 
+0x028: 50a70000000000000000 | Loop:	mrmovq (%rdi), %r10	# read val from src...
+0x032: 50b70800000000000000 | 	mrmovq 8(%rdi), %r11    # read next val from src
+0x03c: 40a60000000000000000 | 	rmmovq %r10, (%rsi)	# src[i] to dst
+0x046: 62aa                 | 	andq   %r10, %r10	# src[i] <= 0?
+0x048: 715b00000000000000   | 	jle    Npos0		# if so, goto Npos0:
+0x051: c0f00100000000000000 | 	iaddq  $1, %rax		# count++
+                            | 
+0x05b:                      | Npos0:	
+0x05b: 40b60400000000000000 | 	rmmovq %r11, 4(%rsi)    # src[i+1] to dst
+0x065: 62bb                 | 	andq   %r11, %r11       # is %r11 <= 0?
+0x067: 717a00000000000000   | 	jle    Npos1		# if so, go to Npos1
+0x070: c0f00100000000000000 | 	iaddq  $1, %rax         # count++
+                            | 
+0x07a:                      | Npos1: 
+0x07a: 50a71000000000000000 | 	mrmovq 16(%rdi), %r10   # src[i+2] to %r10
+0x084: 50b71800000000000000 | 	mrmovq 24(%rdi), %r11   # src[i+3] to %r11
+0x08e: 40a61000000000000000 | 	rmmovq %r10, 16(%rsi)   # src[i+2] to dst[2]
+0x098: 62aa                 | 	andq   %r10, %r10       # src[i+2] <= 0? 
+0x09a: 71ad00000000000000   | 	jle    Npos2            # if so, go to Npos2
+0x0a3: c0f00100000000000000 | 	iaddq  $1, %rax         # count ++
+                            | 
+0x0ad:                      | Npos2: 
+0x0ad: 40b61800000000000000 | 	rmmovq %r11, 24(%rsi)   # src[i+3] to dst
+0x0b7: 62bb                 | 	andq   %r11, %r11       # src[i+3] <= 0? 
+0x0b9: 71cc00000000000000   | 	jle    Unroller         # if so, go to Unroller
+0x0c2: c0f00100000000000000 | 	iaddq  $1, %rax         # count++ 
+                            | 
+0x0cc:                      | Unroller: 
+0x0cc: c0f72000000000000000 | 	iaddq $32, %rdi         # start unrolling src at [i+4]
+0x0d6: c0f62000000000000000 | 	iaddq $32, %rsi         # start unrolling dst at [i+4]
+0x0e0: c0f2fcffffffffffffff | 	iaddq $-4, %rdx         # len is now 4 less
+0x0ea: 752800000000000000   | 	jge   Loop              # if we're not done, start unrolling
+                            | 
+0x0f3:                      | Extra:  
+0x0f3: c0f20400000000000000 | 	iaddq $4, %rdx          # return len to the right value
+                            | 
+0x0fd:                      | Extra0:
+0x0fd: c0f2ffffffffffffffff | 	iaddq  $-1, %rdx        # len--
+0x107: 72b101000000000000   | 	jl     End              # finish up if no extras
+0x110: 50a70000000000000000 | 	mrmovq (%rdi), %r10     # this basically does
+0x11a: 50b70800000000000000 | 	mrmovq 8(%rdi), %r11    # the same thing as 
+0x124: 40a60000000000000000 | 	rmmovq %r10, (%rsi)     # the loop unrollers
+0x12e: 62aa                 | 	andq   %r10, %r10       # but starts 4 indices later.
+0x130: 714301000000000000   | 	jle    Extra1           # pretty neat, huh?
+0x139: c0f00100000000000000 | 	iaddq  $1, %rax         # count++
+                            | 	
+0x143:                      | Extra1: 
+0x143: c0f2ffffffffffffffff | 	iaddq  $-1, %rdx        # len-- 
+0x14d: 72b101000000000000   | 	jl     End              # finish up if no extras 
+0x156: 40b60800000000000000 | 	rmmovq %r11, 8(%rsi)    # src [i+1] to dst[i+1]
+0x160: 62bb                 | 	andq   %r11, %r11       # src [i+1] <= 0?
+0x162: 717501000000000000   | 	jle    Extra2           # if so, go to Extra2
+0x16b: c0f00100000000000000 | 	iaddq  $1, %rax         # count++ 
+                            | 
+0x175:                      | Extra2: 
+0x175: c0f2ffffffffffffffff | 	iaddq  $-1, %rdx        # len-- 
+0x17f: 72b101000000000000   | 	jl     End              # finish up if no extras 
+0x188: 50a71000000000000000 | 	mrmovq 16(%rdi), %r10   # src[i+2] to %r10 
+0x192: 40a61000000000000000 | 	rmmovq %r10, 16(%rsi)   # src[i+2] to dst[i+2] 
+0x19c: 62aa                 | 	andq   %r10, %r10       # src[i+2] <= 0? 
+0x19e: 71b101000000000000   | 	jle    End              # if so, finish up
+0x1a7: c0f00100000000000000 | 	iaddq  $1, %rax         # count++
+                            | 
+0x1b1:                      | End: 
+0x1b1: b07f                 | 	popq   %rdi             # TEAR! DOWN! THE STACK!
+0x1b3: b06f                 | 	popq   %rsi
+0x1b5: 2054                 | 	rrmovq %rbp, %rsp
+0x1b7: b05f                 | 	popq   %rbp 
+0x1b9: 70c201000000000000   | 	jmp    Done
+                            | 
+                            | ##################################################################
+                            | # Do not modify the following section of code
+                            | # Function epilogue.
+0x1c2:                      | Done:
+0x1c2: 90                   | 	ret
+                            | ##################################################################
+                            | # Keep the following label at the end of your function
+0x1c3:                      | End:
+                            | #/* $end ncopy-ys */

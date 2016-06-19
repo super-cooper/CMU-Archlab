@@ -1,0 +1,64 @@
+                            | # Adam Cooper ac251190 
+                            | 
+0x000:                      | 	.pos 0 
+0x000:                      | init: 
+0x000: 30f40004000000000000 | 	irmovq Stack, %rsp  # Set up stack pointer 
+0x00a: 30f50004000000000000 | 	irmovq Stack, %rbp  # Set up base pointer 
+0x014: 805000000000000000   | 	call Main 
+0x01d: 00                   | 	halt 
+                            | 
+0x020:                      | .align 8 
+                            | # Source block 
+0x020:                      | src: 
+0x020: 0a00000000000000     | 	.quad 0x00a 
+0x028: b000000000000000     | 	.quad 0x0b0 
+0x030: 000c000000000000     | 	.quad 0xc00 
+                            | 
+                            | # Destination block 
+0x038:                      | dest: 
+0x038: 1101000000000000     | 	.quad 0x111 
+0x040: 2202000000000000     | 	.quad 0x222 
+0x048: 3303000000000000     | 	.quad 0x333 
+                            | 
+0x050:                      | Main: 
+0x050: 30f72000000000000000 | 	irmovq src, %rdi   # Move src into %rdi 
+0x05a: 30f63800000000000000 | 	irmovq dest, %rsi  # Move dest into %rsi 
+0x064: 30f30200000000000000 | 	irmovq $2, %rbx    # len = 3 - 1
+0x06e: a07f                 | 	pushq  %rdi        # Push %rdi onto stack
+0x070: a06f                 | 	pushq  %rsi        # Push %rsi onto stack
+0x072: 807c00000000000000   | 	call   copy_block 
+0x07b: 90                   | 	ret
+                            | 
+0x07c:                      | copy_block: 
+0x07c: a05f                 | 	pushq  %rbp 
+0x07e: 2045                 | 	rrmovq %rsp, %rbp 
+0x080: 30f00000000000000000 | 	irmovq $0, %rax        # result = 0
+0x08a: 30f10800000000000000 | 	irmovq $8, %rcx        # %rcx is index mover
+0x094: 30f90100000000000000 | 	irmovq $1, %r9         # %r9 is ++ or --
+0x09e: 50251000000000000000 | 	mrmovq 16(%rbp), %rdx  # %rdx = src 
+0x0a8: 50851800000000000000 | 	mrmovq 24(%rbp), %r8   # %r8 = dest 
+0x0b2: 6233                 | 	andq   %rbx, %rbx      # is len 0? 
+0x0b4: 730b01000000000000   | 	je     End             # if so, end
+0x0bd: 80c700000000000000   | 	call   Loop
+0x0c6: 90                   | 	ret
+                            | 
+0x0c7:                      | Loop: 
+0x0c7: 50720000000000000000 | 	mrmovq (%rdx), %rdi  # src to %rdi
+0x0d1: 50680000000000000000 | 	mrmovq (%r8), %rsi   # dest to %rsi
+0x0db: 40780000000000000000 | 	rmmovq %rdi, (%r8)   # swap 
+0x0e5: 40620000000000000000 | 	rmmovq %rsi, (%rdx)
+0x0ef: 6370                 | 	xorq   %rdi, %rax    # checksum 
+0x0f1: 6233                 | 	andq   %rbx, %rbx    # is len = 0? 
+0x0f3: 730b01000000000000   | 	je     End           # if so, end
+0x0fc: 6012                 | 	addq   %rcx, %rdx    # *src++ 
+0x0fe: 6018                 | 	addq   %rcx, %r8     # *dest++ 
+0x100: 6193                 | 	subq   %r9, %rbx     # len--
+0x102: 70c700000000000000   | 	jmp    Loop           
+                            | 
+0x10b:                      | End: # All this function does is tear down so it's ok to jump to
+0x10b: b05f                 | 	popq %rbp # TEAR! DOWN! THE STACK! 
+0x10d: 90                   | 	ret       
+                            | 
+0x400:                      | 	.pos 0x400 
+0x400:                      | Stack:
+                            | 

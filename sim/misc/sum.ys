@@ -1,0 +1,56 @@
+# Adam Cooper ac251190 
+
+	.pos 0
+init:
+	irmovq Stack, %rsp  # set up stack pointer 
+	irmovq Stack, %rbp   # set up base pointer 
+	call Main 
+	halt 
+
+# Sample linked list 
+.align 8
+ele1: 
+	.quad 0x0000a 
+	.quad ele2
+ele5: 
+	.quad 0xe0000
+	.quad 0x00
+ele2: 
+	.quad 0x000b0
+	.quad ele3
+ele4: 
+	.quad 0x0d000
+	.quad ele5
+ele3: 
+	.quad 0x00c00
+	.quad ele4
+
+Main: 
+	irmovq ele1, %rax 
+	pushq  %rax        # Pointer to list pushed to stack
+	call   sum_list 
+	ret 
+
+sum_list: 
+	pushq  %rbp           # Push %rbp onto the stack 
+	rrmovq %rsp, %rbp 
+	mrmovq 16(%rbp), %rdx  # Move ele1 into %rdx
+	irmovq $0, %rax       # Set up a base to add eles to
+	andq   %rdx, %rdx     # Is this the end of the list? 
+	je     End            # If it is, jump to the end 
+	irmovq $8, %rcx       # Turn %rcx into a index mover 
+
+Loop: 
+	mrmovq (%rdx), %rbx   # Move ls into %rbx
+	addq   %rbx, %rax     # val += ele
+	addq   %rcx, %rdx     # Move to next value in the list 
+	mrmovq (%rdx), %rdx 
+	andq   %rdx, %rdx     # Are we at the last ele? 
+	jne    Loop           # If not, go again 
+
+End: 
+	popq %rbp # TEAR! DOWN! THE STACK! 
+	ret       # Return the original call to Main
+
+	.pos 0x100
+Stack:

@@ -1,0 +1,56 @@
+                            | # Adam Cooper ac251190 
+                            | 
+0x000:                      | 	.pos 0
+0x000:                      | init:
+0x000: 30f40001000000000000 | 	irmovq Stack, %rsp  # set up stack pointer 
+0x00a: 30f50001000000000000 | 	irmovq Stack, %rbp   # set up base pointer 
+0x014: 807000000000000000   | 	call Main 
+0x01d: 00                   | 	halt 
+                            | 
+                            | # Sample linked list 
+0x020:                      | .align 8
+0x020:                      | ele1: 
+0x020: 0a00000000000000     | 	.quad 0x0000a 
+0x028: 4000000000000000     | 	.quad ele2
+0x030:                      | ele5: 
+0x030: 00000e0000000000     | 	.quad 0xe0000
+0x038: 0000000000000000     | 	.quad 0x00
+0x040:                      | ele2: 
+0x040: b000000000000000     | 	.quad 0x000b0
+0x048: 6000000000000000     | 	.quad ele3
+0x050:                      | ele4: 
+0x050: 00d0000000000000     | 	.quad 0x0d000
+0x058: 3000000000000000     | 	.quad ele5
+0x060:                      | ele3: 
+0x060: 000c000000000000     | 	.quad 0x00c00
+0x068: 5000000000000000     | 	.quad ele4
+                            | 
+0x070:                      | Main: 
+0x070: 30f02000000000000000 | 	irmovq ele1, %rax 
+0x07a: a00f                 | 	pushq  %rax        # Pointer to list pushed to stack
+0x07c: 808600000000000000   | 	call   sum_list 
+0x085: 90                   | 	ret 
+                            | 
+0x086:                      | sum_list: 
+0x086: a05f                 | 	pushq  %rbp           # Push %rbp onto the stack 
+0x088: 2045                 | 	rrmovq %rsp, %rbp 
+0x08a: 50251000000000000000 | 	mrmovq 16(%rbp), %rdx  # Move ele1 into %rdx
+0x094: 30f00000000000000000 | 	irmovq $0, %rax       # Set up a base to add eles to
+0x09e: 6222                 | 	andq   %rdx, %rdx     # Is this the end of the list? 
+0x0a0: 73d600000000000000   | 	je     End            # If it is, jump to the end 
+0x0a9: 30f10800000000000000 | 	irmovq $8, %rcx       # Turn %rcx into a index mover 
+                            | 
+0x0b3:                      | Loop: 
+0x0b3: 50320000000000000000 | 	mrmovq (%rdx), %rbx   # Move ls into %rbx
+0x0bd: 6030                 | 	addq   %rbx, %rax     # val += ele
+0x0bf: 6012                 | 	addq   %rcx, %rdx     # Move to next value in the list 
+0x0c1: 50220000000000000000 | 	mrmovq (%rdx), %rdx 
+0x0cb: 6222                 | 	andq   %rdx, %rdx     # Are we at the last ele? 
+0x0cd: 74b300000000000000   | 	jne    Loop           # If not, go again 
+                            | 
+0x0d6:                      | End: 
+0x0d6: b05f                 | 	popq %rbp # TEAR! DOWN! THE STACK! 
+0x0d8: 90                   | 	ret       # Return the original call to Main
+                            | 
+0x100:                      | 	.pos 0x100
+0x100:                      | Stack:
